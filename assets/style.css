@@ -281,7 +281,7 @@
   font-size: var(--text-base);
   line-height: var(--tw-leading, var(--text-base--line-height));
   color: var(--color-white);
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.75);
 }
 .detail-line-root {
   color: #acacfc;
@@ -343,9 +343,11 @@
 }
 .outer-link {
   text-decoration-style: dashed;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.75);
   &:hover {
     @media (hover: hover) {
       text-decoration-line: underline;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.75);
     }
   }
 }
