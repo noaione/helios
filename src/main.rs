@@ -12,6 +12,7 @@ mod sysgetter;
 
 const HELIOS_IMAGE: &[u8; 57693] = include_bytes!("../assets/helios.png");
 const HELIOS_BANNER: &[u8; 38773] = include_bytes!("../assets/helios-img.png");
+const HELIOS_BANNER_WEBP: &[u8; 35086] = include_bytes!("../assets/helios-img.webp");
 const HELIOS_JS: &str = include_str!("../assets/scriptlet.js");
 const HELIOS_CSS: &str = include_str!("../assets/style.css");
 const HELIOS_HTML: &str = include_str!("../assets/index.html");
@@ -28,6 +29,10 @@ async fn main() {
         .route(
             "/assets/helios-img.png",
             axum::routing::get(helios_image_banner),
+        )
+        .route(
+            "/assets/helios-img.webp",
+            axum::routing::get(helios_image_banner_webp),
         )
         .route("/assets/scriptlet.js", axum::routing::get(helios_js))
         .route("/assets/style.css", axum::routing::get(helios_css))
@@ -70,6 +75,18 @@ async fn helios_image_banner() -> impl IntoResponse {
             HeaderValue::from_static("image/png"),
         )],
         HELIOS_BANNER.to_vec(),
+    )
+        .into_response()
+}
+
+async fn helios_image_banner_webp() -> impl IntoResponse {
+    // server the helios image with content type
+    (
+        [(
+            axum::http::header::CONTENT_TYPE,
+            HeaderValue::from_static("image/webp"),
+        )],
+        HELIOS_BANNER_WEBP.to_vec(),
     )
         .into_response()
 }
