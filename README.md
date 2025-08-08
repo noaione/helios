@@ -1,4 +1,4 @@
-![Banner](https://p.ihateani.me/fzqofmcu.png)
+![Banner](https://p.ihateani.me/yezknxeh.png)
 
 > 🐴 helios (/ˈhiliˌɑs/)<br />
 > a lightweight web server to show system information in neofetch-like style
