@@ -251,6 +251,7 @@ pub fn get_system_info_by_lines() -> SystemInfo {
                         && !addr.is_loopback()
                         && !addr.is_multicast()
                         && !addr.is_unspecified()
+                        && !addr.is_private()
                     {
                         valid_ipv4 += 1;
                     }
