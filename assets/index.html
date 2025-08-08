@@ -11,6 +11,36 @@
     <meta property="og:description" content="neigh">
     <link rel="icon" href="/assets/helios.png" type="image/png">
     <link rel="stylesheet" href="/assets/style.css">
+    <style>
+        .nt {
+            user-select: none;
+            cursor: default;
+            -webkit-user-select: none;
+        }
+
+        .blinking-cursor {
+            display: inline-block;
+            width: 1ch;
+            background-color: white;
+            animation: blink 1s step-end infinite;
+            color: transparent; /* Hide the text but keep the box */
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.75);
+        }
+
+        @keyframes blink {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -41,10 +71,13 @@
             </div>
         </div>
         <div class="mt-8 mb-4 text-center font-mono text-white md:mx-4 md:mt-4 md:text-left">
-            <a class="outer-link" href="https://umamusu.wiki/Daitaku_Helios">🐴 helios</a>
+            <span class="nt">🐴</span> <a class="outer-link" href="https://umamusu.wiki/Daitaku_Helios">helios</a>
             <a class="outer-link" href="https://status.n4o.xyz">status</a>
             <a class="outer-link" href="https://naoti.me">naoti.me</a>
             <a class="outer-link" href="https://ihateani.me">ihateani.me</a>
+        </div>
+        <div class="my-4 text-left font-mono text-white md:mx-4 glow-text">
+            <span class="nt">╰─$</span> <span data-id="writing-area"></span><span class="nt blinking-cursor" data-id="cursor">_</span>
         </div>
     </main>
     <script src="/assets/scriptlet.js"></script>

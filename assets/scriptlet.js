@@ -7,6 +7,10 @@
     //     }[];
     // }
 
+    const CLEAR_SPEED = 75; // ms
+    const WRITE_SPEED = 50; // ms
+    const START_DELAY = 500; // ms
+
     function writeDataToHTML(data) {
         // create the host header first
         const base = document.querySelector('#detail');
@@ -76,6 +80,123 @@
     function start() {
         setInterval(refreshData, 20000); // refresh every 20 seconds
         refreshData(); // initial fetch
+
+        /**
+         * Write text to the console.
+         * @param {string} text input text to write to the console
+         */
+        window.toConsole = (text) => {
+            if (typeof text !== 'string') {
+                console.error('Input text must be a string');
+                return;
+            }
+
+            // sanitize the input text
+            const spanElement = document.createElement('span');
+            spanElement.textContent = text; // this will escape any HTML tags
+            const realText = spanElement.textContent;
+
+            if (realText.trim() === '') {
+                clearWritingArea();
+            } else {
+                animateWritingArea(realText.trim());
+            }
+        }
+
+        window.clearConsole = () => {
+            clearWritingArea();
+        }
+
+        const cursor = document.querySelector('[data-id="cursor"]');
+        if (cursor) {
+            // when clicked, alert the current text in the writing area
+            cursor.addEventListener('click', () => {
+                const toBeWritten = prompt('Enter text to write to the console, leave empty to clear it out:', '');
+                if (toBeWritten !== null) {
+                    if (toBeWritten.trim() === '') {
+                        clearWritingArea();
+                    } else {
+                        animateWritingArea(toBeWritten.trim());
+                    }
+                }
+            })
+        }
+    }
+
+    /**
+     * Clear the writing area with an animation effect.
+     * @param {HTMLSpanElement | null} element the element to clear, if null, it will use the writing area
+     * @returns {void}
+     */
+    function clearWritingArea(element = null) {
+        /** @type {HTMLSpanElement} */
+        const writingArea = element ?? document.querySelector('[data-id="writing-area"]');
+        if (!writingArea) {
+            console.error('Writing area not found');
+            return;
+        }
+
+        const currentText = writingArea.textContent.trim();
+        if (currentText.length > 0) {
+            // animate clearing the text, clear one char every 100ms
+            let index = currentText.length - 1;
+            const cleanId = setInterval(() => {
+                if (index < 0) {
+                    clearInterval(cleanId);
+                    writingArea.textContent = ''; // clear the text
+                    return;
+                }
+                writingArea.textContent = currentText.slice(0, index);
+                index--;
+            }, CLEAR_SPEED);
+        }
+
+        return currentText.length; // return true if there was text to clear
+    }
+
+    /**
+     * Write text to the writing area with an animation effect.
+     * @param {string} inputText 
+     * @returns {void}
+     */
+    function animateWritingArea(inputText) {
+        // check if any text is present
+        /** @type {HTMLSpanElement} */
+        const writingArea = document.querySelector('[data-id="writing-area"]');
+        if (!writingArea) {
+            console.error('Writing area not found');
+            return;
+        }
+
+        const textClearAmount = clearWritingArea(writingArea); // clear the writing area first
+
+        /**
+         * Write text to the writing area with a real animation effect.
+         * @param {string} text the text to write
+         */
+        const realWritingAnimation = (text) => {
+            writingArea.textContent = ''; // clear the text
+            let writeIndex = 0;
+
+            const writeId = setInterval(() => {
+                if (writeIndex >= text.length) {
+                    clearInterval(writeId);
+                    return;
+                }
+                writingArea.textContent += text[writeIndex];
+                writeIndex++;
+            }, WRITE_SPEED); // write one char every 75ms
+        }
+
+        // wait until the text is cleared, then write the new text
+        if (textClearAmount > 0) {
+            setTimeout(() => {
+                realWritingAnimation(inputText);
+            }, (textClearAmount * CLEAR_SPEED) + START_DELAY); // wait for the clear animation to finish
+        } else {
+            // immediately write the text if there was no text to clear
+            realWritingAnimation(inputText);
+        }
     }
 
     if (document.readyState === 'loading') {
