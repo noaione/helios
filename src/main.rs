@@ -17,7 +17,7 @@ const HELIOS_JS: &str = include_str!("../assets/scriptlet.js");
 const HELIOS_CSS: &str = include_str!("../assets/style.css");
 const HELIOS_HTML: &str = include_str!("../assets/index.html");
 
-static FIRST_TIME_DATA: LazyLock<SystemInfo> = LazyLock::new(|| get_system_info_by_lines());
+static FIRST_TIME_DATA: LazyLock<SystemInfo> = LazyLock::new(get_system_info_by_lines);
 
 #[tokio::main]
 async fn main() {

@@ -31,12 +31,8 @@ const MAC_VERSIONS: [(&str, &str, &str); 23] = [
     ("10.0", "Mac OS X", "Cheetah"),
 ];
 
-static CACHED_HOST: LazyLock<String> = LazyLock::new(|| {
-    get_pc_host()
-});
-static KERNEL_LONG_VER: LazyLock<String> = LazyLock::new(|| {
-    System::kernel_long_version()
-});
+static CACHED_HOST: LazyLock<String> = LazyLock::new(get_pc_host);
+static KERNEL_LONG_VER: LazyLock<String> = LazyLock::new(System::kernel_long_version);
 static OS_NAME: LazyLock<String> = LazyLock::new(|| {
     let os_name = System::name().unwrap_or_else(|| "Unknown".to_string());
 
@@ -52,18 +48,15 @@ static OS_NAME: LazyLock<String> = LazyLock::new(|| {
         } else {
             actual_os_name = "macOS".to_string();
         }
-    } else {
-        if let Some(version) = os_version {
-            actual_os_name.push_str(" ");
-            actual_os_name.push_str(&version);
-        }
+    } else if let Some(version) = os_version {
+        actual_os_name.push(' ');
+        actual_os_name.push_str(&version);
     }
 
     actual_os_name
 });
-static HOSTNAME: LazyLock<String> = LazyLock::new(|| {
-    System::host_name().unwrap_or_else(|| "unknown.local".to_string())
-});
+static HOSTNAME: LazyLock<String> =
+    LazyLock::new(|| System::host_name().unwrap_or_else(|| "unknown.local".to_string()));
 
 // some static information about the system
 // static VIRT_HOST: &str
@@ -363,10 +356,10 @@ fn calculate_cpu_freq(freq: u64) -> String {
         if freq.fract() == 0.0 {
             format!("{} GHz", freq as u64)
         } else {
-            format!("{:.2} GHz", freq)
+            format!("{freq:.2} GHz")
         }
     } else {
-        format!("{} MHz", freq)
+        format!("{freq} MHz")
     }
 }
 
@@ -379,7 +372,7 @@ fn get_pc_host() -> String {
         "/sys/devices/virtual/dmi/id/product_name",
         "/sys/class/dmi/id/product_name",
     )
-    .or_else(|| get_host_product_name());
+    .or_else(get_host_product_name);
     let host_version = read_dmi(
         "/sys/devices/virtual/dmi/id/product_version",
         "/sys/class/dmi/id/product_version",
@@ -389,7 +382,7 @@ fn get_pc_host() -> String {
 
     if let Some(family) = host_family {
         if !family.trim().is_empty() {
-            merged_str.push_str(&family.trim());
+            merged_str.push_str(family.trim());
             merged_str.push(' ');
         }
     }
@@ -399,15 +392,15 @@ fn get_pc_host() -> String {
             if trim.starts_with("Standard PC") {
                 merged_str.push_str("KVM/QEMU ");
             }
-            merged_str.push_str(&name.trim());
+            merged_str.push_str(name.trim());
             merged_str.push(' ');
         }
     }
 
     if let Some(version) = host_version {
         if !version.trim().is_empty() {
-            merged_str.push_str("(");
-            merged_str.push_str(&version.trim());
+            merged_str.push('(');
+            merged_str.push_str(version.trim());
             merged_str.push_str(") ");
         }
     }
