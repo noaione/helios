@@ -2,6 +2,7 @@ use std::{collections::HashSet, net::IpAddr, sync::LazyLock};
 
 use serde::Serialize;
 use sysinfo::{Disks, Networks, System};
+use tokio::sync::RwLock;
 
 const MAC_VERSIONS: [(&str, &str, &str); 23] = [
     ("26", "macOS", "Tahoe"),
@@ -30,6 +31,7 @@ const MAC_VERSIONS: [(&str, &str, &str); 23] = [
     ("10.1", "Mac OS X", "Puma"),
     ("10.0", "Mac OS X", "Cheetah"),
 ];
+const MAXIMUM_HEARTBEAT: i64 = 15; // 15 seconds (a bit less than the heartbeat in the frontend)
 
 static CACHED_HOST: LazyLock<String> = LazyLock::new(get_pc_host);
 static KERNEL_LONG_VER: LazyLock<String> = LazyLock::new(System::kernel_long_version);
@@ -58,6 +60,14 @@ static OS_NAME: LazyLock<String> = LazyLock::new(|| {
 static HOSTNAME: LazyLock<String> =
     LazyLock::new(|| System::host_name().unwrap_or_else(|| "unknown.local".to_string()));
 
+static LOCKED_CURRENT: LazyLock<RwLock<(SystemInfo, i64)>> = LazyLock::new(|| {
+    // Initialize the first time data with system info
+    let info = get_system_info_by_lines_unlocked();
+    let ts = chrono::Utc::now().timestamp();
+
+    RwLock::new((info, ts))
+});
+
 // some static information about the system
 // static VIRT_HOST: &str
 
@@ -83,7 +93,7 @@ impl From<(String, String)> for LineInfo {
 }
 
 impl SystemInfo {
-    pub fn into_html_info(self) -> String {
+    pub fn into_html_info(&self) -> String {
         let mut html = String::new();
         // host
         html.push_str(r#"<p class="host-header">noaione<span class="host-at">@</span>"#);
@@ -97,7 +107,7 @@ impl SystemInfo {
         html.push_str(&"-".repeat(host_length));
         html.push_str("</p>\n");
 
-        for line in self.lines {
+        for line in &self.lines {
             html.push_str(r#"<p class="detail-line"><span class="detail-line-root">"#);
             html.push_str(&line.key);
             html.push_str("</span>: ");
@@ -107,9 +117,16 @@ impl SystemInfo {
 
         html
     }
+
+    pub async fn update_self(&mut self) {
+        let sys_info = get_system_info_by_lines_unlocked();
+        self.host = sys_info.host;
+        self.lines = sys_info.lines;
+    }
 }
 
-pub fn get_system_info_by_lines() -> SystemInfo {
+/// Not a future, but a function that retrieves system information.
+pub fn get_system_info_by_lines_unlocked() -> SystemInfo {
     let mut sys = System::new_all();
     sys.refresh_all();
 
@@ -291,6 +308,26 @@ pub fn get_system_info_by_lines() -> SystemInfo {
         host: HOSTNAME.clone(),
         lines: all_lines,
     }
+}
+
+pub async fn get_system_info_by_lines(skip_guard: bool) -> SystemInfo {
+    let now_ts = chrono::Utc::now().timestamp();
+    let read_guard = LOCKED_CURRENT.read().await;
+    if !skip_guard && now_ts - read_guard.1 < MAXIMUM_HEARTBEAT {
+        return read_guard.0.clone();
+    }
+
+    // This function is called from the main thread, so we can use the unlocked version
+    let sys_info = get_system_info_by_lines_unlocked();
+
+    if !skip_guard {
+        // Update the cached data
+        let mut write_guard = LOCKED_CURRENT.write().await;
+        write_guard.0 = sys_info.clone();
+        write_guard.1 = now_ts;
+    }
+
+    sys_info
 }
 
 // Helper function to format uptime

@@ -5,8 +5,9 @@ use axum::{
 };
 use std::sync::LazyLock;
 use tokio::net::TcpListener;
+use tokio::sync::RwLock;
 
-use crate::sysgetter::{SystemInfo, get_system_info_by_lines};
+use crate::sysgetter::{get_system_info_by_lines, get_system_info_by_lines_unlocked, SystemInfo};
 
 mod sysgetter;
 
@@ -17,7 +18,15 @@ const HELIOS_JS: &str = include_str!("../assets/scriptlet.js");
 const HELIOS_CSS: &str = include_str!("../assets/style.css");
 const HELIOS_HTML: &str = include_str!("../assets/index.html");
 
-static FIRST_TIME_DATA: LazyLock<SystemInfo> = LazyLock::new(get_system_info_by_lines);
+const MAXIMUM_HEARTBEAT: i64 = 60 * 60 * 24; // 24 hours
+
+static FIRST_TIME_DATA: LazyLock<RwLock<(SystemInfo, i64)>> = LazyLock::new(|| {
+    // Initialize the first time data with system info
+    let info = get_system_info_by_lines_unlocked();
+    let ts = chrono::Utc::now().timestamp();
+
+    RwLock::new((info, ts))
+});
 
 #[tokio::main]
 async fn main() {
@@ -48,10 +57,23 @@ async fn main() {
 }
 
 async fn root() -> impl IntoResponse {
-    let first_time_data = FIRST_TIME_DATA.clone();
-    // include index.html from the html module
-    let formatted_helios_html =
-        HELIOS_HTML.replace("{{first_time_html}}", &first_time_data.into_html_info());
+    let now = chrono::Utc::now().timestamp();
+    let first_time_read = FIRST_TIME_DATA.read().await;
+    let diff = now.saturating_sub(first_time_read.1);
+    let formatted_helios_html = if diff > MAXIMUM_HEARTBEAT {
+        // reset the first time data if the heartbeat is too old
+        let ts = chrono::Utc::now().timestamp();
+        let mut first_time_data = FIRST_TIME_DATA.write().await;
+        first_time_data.0.update_self().await;
+        first_time_data.1 = ts;
+
+        // include index.html from the module with updated data
+        HELIOS_HTML.replace("{{first_time_html}}", &first_time_data.0.into_html_info())
+    } else {
+        // include index.html from the html module
+        HELIOS_HTML.replace("{{first_time_html}}", &first_time_read.0.into_html_info())
+    };
+
     Html(formatted_helios_html)
 }
 
@@ -123,7 +145,7 @@ async fn status() -> impl IntoResponse {
 }
 
 async fn update_status() -> impl IntoResponse {
-    let system_info = get_system_info_by_lines();
+    let system_info = get_system_info_by_lines(false).await;
 
     Json(system_info)
 }
