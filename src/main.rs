@@ -7,7 +7,9 @@ use std::sync::LazyLock;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-use crate::sysgetter::{get_system_info_by_lines, get_system_info_by_lines_unlocked, SystemInfo};
+use crate::sysgetter::{
+    SystemInfo, get_system_info_by_lines_unlocked, get_system_info_by_lines_with_lock,
+};
 
 mod sysgetter;
 
@@ -68,10 +70,10 @@ async fn root() -> impl IntoResponse {
         first_time_data.1 = ts;
 
         // include index.html from the module with updated data
-        HELIOS_HTML.replace("{{first_time_html}}", &first_time_data.0.into_html_info())
+        HELIOS_HTML.replace("{{first_time_html}}", &first_time_data.0.as_html_info())
     } else {
         // include index.html from the html module
-        HELIOS_HTML.replace("{{first_time_html}}", &first_time_read.0.into_html_info())
+        HELIOS_HTML.replace("{{first_time_html}}", &first_time_read.0.as_html_info())
     };
 
     Html(formatted_helios_html)
@@ -145,7 +147,7 @@ async fn status() -> impl IntoResponse {
 }
 
 async fn update_status() -> impl IntoResponse {
-    let system_info = get_system_info_by_lines(false).await;
+    let system_info = get_system_info_by_lines_with_lock().await;
 
     Json(system_info)
 }

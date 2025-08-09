@@ -93,7 +93,7 @@ impl From<(String, String)> for LineInfo {
 }
 
 impl SystemInfo {
-    pub fn into_html_info(&self) -> String {
+    pub fn as_html_info(&self) -> String {
         let mut html = String::new();
         // host
         html.push_str(r#"<p class="host-header">noaione<span class="host-at">@</span>"#);
@@ -310,22 +310,20 @@ pub fn get_system_info_by_lines_unlocked() -> SystemInfo {
     }
 }
 
-pub async fn get_system_info_by_lines(skip_guard: bool) -> SystemInfo {
+pub async fn get_system_info_by_lines_with_lock() -> SystemInfo {
     let now_ts = chrono::Utc::now().timestamp();
     let read_guard = LOCKED_CURRENT.read().await;
-    if !skip_guard && now_ts - read_guard.1 < MAXIMUM_HEARTBEAT {
+    if now_ts - read_guard.1 < MAXIMUM_HEARTBEAT {
         return read_guard.0.clone();
     }
 
     // This function is called from the main thread, so we can use the unlocked version
     let sys_info = get_system_info_by_lines_unlocked();
 
-    if !skip_guard {
-        // Update the cached data
-        let mut write_guard = LOCKED_CURRENT.write().await;
-        write_guard.0 = sys_info.clone();
-        write_guard.1 = now_ts;
-    }
+    // Update the cached data
+    let mut write_guard = LOCKED_CURRENT.write().await;
+    write_guard.0 = sys_info.clone();
+    write_guard.1 = now_ts;
 
     sys_info
 }
