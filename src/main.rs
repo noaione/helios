@@ -7,9 +7,7 @@ use std::sync::LazyLock;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-use crate::sysgetter::{
-    SystemInfo, get_system_info_by_lines_unlocked, get_system_info_by_lines_with_lock,
-};
+use crate::sysgetter::{SystemInfo, get_system_info_by_lines_unlocked};
 
 mod sysgetter;
 
@@ -147,7 +145,7 @@ async fn status() -> impl IntoResponse {
 }
 
 async fn update_status() -> impl IntoResponse {
-    let system_info = get_system_info_by_lines_with_lock().await;
+    let system_info = get_system_info_by_lines_unlocked();
 
     Json(system_info)
 }
