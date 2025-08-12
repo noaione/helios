@@ -207,7 +207,7 @@ pub fn get_system_info_by_lines_unlocked() -> SystemInfo {
 
     let disks = Disks::new_with_refreshed_list();
     let mut mounted: HashSet<String> = HashSet::new();
-    let mut disk_lines = vec![];
+    let mut disk_lines: Vec<(String, String)> = vec![];
     for disk in &disks {
         let total_space = disk.total_space();
         let available_space = disk.available_space();
@@ -233,19 +233,22 @@ pub fn get_system_info_by_lines_unlocked() -> SystemInfo {
             _ => {}
         }
 
-        disk_lines.push(format!(
-            "{} / {} ({:.1}%) - {file_system}",
-            format_bytes(used_space),
-            format_bytes(total_space),
-            usage_percent
+        disk_lines.push((
+            format!(
+                "{} / {} ({:.1}%) - {file_system}",
+                format_bytes(used_space),
+                format_bytes(total_space),
+                usage_percent
+            ),
+            disk.mount_point().to_string_lossy().to_string(),
         ));
     }
 
     let disk_total = disk_lines.len();
     if disk_total > 0 {
-        for (i, line) in disk_lines.iter().enumerate() {
+        for (line, mnt_point) in &disk_lines {
             let disk_key = if disk_total > 1 {
-                format!("Disk ({})", i + 1)
+                format!("Disk ({})", mnt_point)
             } else {
                 "Disk".to_string()
             };
