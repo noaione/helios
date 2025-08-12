@@ -11,6 +11,11 @@
     const WRITE_SPEED = 50; // ms
     const START_DELAY = 500; // ms
 
+    // Global abort controller for fetch requests so we don't have multiple fetches running at the same time
+    const state = {
+        controller: new AbortController(),
+    };
+
     function writeDataToHTML(data) {
         // create the host header first
         const base = document.querySelector('#detail');
@@ -64,7 +69,9 @@
 
     async function refreshData() {
         try {
-            const response = await fetch('/s');
+            const response = await fetch('/s', {
+                signal: state.controller.signal, // use the global abort controller
+            });
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -78,7 +85,17 @@
     }
 
     function start() {
-        setInterval(refreshData, 20000); // refresh every 20 seconds
+        setInterval(() => {
+            // abort any ongoing fetch request
+            if (state.controller.signal.aborted) {
+                state.controller = new AbortController(); // reset the controller if it was aborted
+            } else {
+                state.controller.abort(); // abort the ongoing request
+                state.controller = new AbortController(); // create a new controller for the next request
+            }
+
+            refreshData();
+        }, 20000); // refresh every 20 seconds
         refreshData(); // initial fetch
 
         /**
