@@ -3,9 +3,8 @@ use axum::{
     http::HeaderValue,
     response::{Html, IntoResponse},
 };
-use std::sync::LazyLock;
+use std::sync::OnceLock;
 use tokio::net::TcpListener;
-use tokio::sync::RwLock;
 
 use crate::sysgetter::{SystemInfo, get_system_info_by_lines_unlocked};
 
@@ -18,15 +17,7 @@ const HELIOS_JS: &str = include_str!("../assets/scriptlet.js");
 const HELIOS_CSS: &str = include_str!("../assets/style.css");
 const HELIOS_HTML: &str = include_str!("../assets/index.html");
 
-const MAXIMUM_HEARTBEAT: i64 = 60 * 60 * 24; // 24 hours
-
-static FIRST_TIME_DATA: LazyLock<RwLock<(SystemInfo, i64)>> = LazyLock::new(|| {
-    // Initialize the first time data with system info
-    let info = get_system_info_by_lines_unlocked();
-    let ts = chrono::Utc::now().timestamp();
-
-    RwLock::new((info, ts))
-});
+static FIRST_TIME_DATA: OnceLock<SystemInfo> = OnceLock::new();
 
 #[tokio::main]
 async fn main() {
@@ -57,24 +48,10 @@ async fn main() {
 }
 
 async fn root() -> impl IntoResponse {
-    let now = chrono::Utc::now().timestamp();
-    let first_time_read = FIRST_TIME_DATA.read().await;
-    let diff = now.saturating_sub(first_time_read.1);
-    let formatted_helios_html = if diff > MAXIMUM_HEARTBEAT {
-        // reset the first time data if the heartbeat is too old
-        let ts = chrono::Utc::now().timestamp();
-        let mut first_time_data = FIRST_TIME_DATA.write().await;
-        first_time_data.0.update_self().await;
-        first_time_data.1 = ts;
+    // get the first time data if it exists
+    let first_time_data = FIRST_TIME_DATA.get_or_init(get_system_info_by_lines_unlocked);
 
-        // include index.html from the module with updated data
-        HELIOS_HTML.replace("{{first_time_html}}", &first_time_data.0.as_html_info())
-    } else {
-        // include index.html from the html module
-        HELIOS_HTML.replace("{{first_time_html}}", &first_time_read.0.as_html_info())
-    };
-
-    Html(formatted_helios_html)
+    Html(HELIOS_HTML.replace("{{first_time_html}}", &first_time_data.as_html_info()))
 }
 
 async fn helios_image() -> impl IntoResponse {

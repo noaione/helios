@@ -107,12 +107,6 @@ impl SystemInfo {
 
         html
     }
-
-    pub async fn update_self(&mut self) {
-        let sys_info = get_system_info_by_lines_unlocked();
-        self.host = sys_info.host;
-        self.lines = sys_info.lines;
-    }
 }
 
 /// Not a future, but a function that retrieves system information.
@@ -391,11 +385,11 @@ fn get_pc_host() -> String {
 
     let mut merged_str = String::new();
 
-    if let Some(family) = host_family {
-        if !family.trim().is_empty() {
-            merged_str.push_str(family.trim());
-            merged_str.push(' ');
-        }
+    if let Some(family) = host_family
+        && !family.trim().is_empty()
+    {
+        merged_str.push_str(family.trim());
+        merged_str.push(' ');
     }
     if let Some(name) = host_name {
         let trim = name.trim();
@@ -408,12 +402,12 @@ fn get_pc_host() -> String {
         }
     }
 
-    if let Some(version) = host_version {
-        if !version.trim().is_empty() {
-            merged_str.push('(');
-            merged_str.push_str(version.trim());
-            merged_str.push_str(") ");
-        }
+    if let Some(version) = host_version
+        && !version.trim().is_empty()
+    {
+        merged_str.push('(');
+        merged_str.push_str(version.trim());
+        merged_str.push_str(") ");
     }
 
     // trim the result
